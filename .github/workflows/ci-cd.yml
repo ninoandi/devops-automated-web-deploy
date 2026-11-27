@@ -1,0 +1,39 @@
+name: CI/CD Docker Web Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-and-deploy:
+    name: Validate, Build & Deploy Container
+    runs-on: self-hosted
+
+    steps:
+      - name: 1. Checkout Repository Code
+        uses: actions/checkout@v4
+
+      - name: 2. Continuous Integration - Validate HTML & Dockerfile
+        run: |
+          test -f app/index.html
+          test -f Dockerfile
+          grep -q "<!DOCTYPE html>" app/index.html
+          echo "Validasi file sumber berhasil!"
+
+      - name: 3. Continuous Deployment - Rebuild & Restart Docker Container
+        run: |
+          cd $HOME/devops-automated-web-deploy
+          git pull origin main
+          docker compose up -d --build --remove-orphans
+          docker image prune -f
+
+      - name: 4. Post-Deploy Smoke Test (Verifikasi HTTP 200)
+        run: |
+          sleep 3
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080)
+          if [ "$STATUS" -ne 200 ]; then
+            echo "Deployment gagal! HTTP status: $STATUS"
+            exit 1
+          fi
+          echo "Smoke test sukses! Aplikasi live dengan HTTP $STATUS."
