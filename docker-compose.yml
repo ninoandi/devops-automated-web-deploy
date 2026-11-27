@@ -1,0 +1,7 @@
+services:
+  webapp:
+    build: .
+    container_name: devops-webapp
+    ports:
+      - "8080:80"
+    restart: unless-stopped
